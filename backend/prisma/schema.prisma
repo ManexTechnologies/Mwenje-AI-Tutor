@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          Role     @default(STUDENT)
+  grade         String
+  curriculum    Curriculum
+  school        String?
+  createdAt     DateTime @default(now())
+  chats         ChatSession[]
+  quizzes       Quiz[]
+  essays        Essay[]
+  studyPlans    StudyPlan[]
+  progress      Progress[]
+  achievements  Achievement[]
+}
+
+model Subject {
+  id            String   @id @default(uuid())
+  name          String
+  curriculum    Curriculum
+  syllabusTopic Json
+  quizzes       Quiz[]
+  chats         ChatSession[]
+  essays        Essay[]
+  progress      Progress[]
+}
+
+model Quiz {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  difficulty  String
+  questions   Json
+  score       Int
+  completedAt DateTime @default(now())
+}
+
+model ChatSession {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  subjectId  String
+  messages   Json
+  createdAt  DateTime @default(now())
+}
+
+model Essay {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subjectId String
+  content   String
+  feedback  Json
+  score     Int
+  createdAt DateTime @default(now())
+}
+
+model StudyPlan {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  examDates  Json
+  schedule   Json
+  generatedAt DateTime @default(now())
+}
+
+model Progress {
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  subject      Subject  @relation(fields: [subjectId], references: [id])
+  subjectId    String
+  masteryScore Int      @default(0)
+  lastUpdated  DateTime @updatedAt
+}
+
+model Achievement {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  badgeType String
+  earnedAt  DateTime @default(now())
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+enum Curriculum {
+  ZIMSEC
+  CAMBRIDGE
+  BOTH
+}
