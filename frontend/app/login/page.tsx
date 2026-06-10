@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { loginUser } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,22 +17,12 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const res = await fetch('http://localhost:4000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Login failed')
-        return
-      }
-
-      localStorage.setItem('token', data.token)
+      await loginUser(email, password)
       router.push('/dashboard')
+      router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error')
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -39,10 +30,10 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-bg-primary text-text-primary">
-      <section className="mx-auto max-w-3xl px-6 py-16 md:px-10">
-        <div className="rounded-[32px] border border-[rgba(28,25,23,0.08)] bg-white p-10 shadow-soft">
+      <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
+        <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-soft sm:rounded-[32px] sm:p-10">
           <p className="text-sm uppercase tracking-[0.28em] text-accent-secondary">Welcome back</p>
-          <h1 className="mt-4 text-4xl font-display font-semibold">Log in to your learning hub.</h1>
+          <h1 className="mt-4 text-3xl font-display font-semibold sm:text-4xl">Log in to your learning hub.</h1>
           {error && (
             <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
           )}
@@ -77,15 +68,9 @@ export default function LoginPage() {
               {loading ? 'Logging in...' : 'Continue'}
             </button>
           </form>
-          <div className="mt-6 flex items-center justify-between text-sm text-text-secondary">
+          <div className="mt-6 flex flex-col gap-3 text-sm text-text-secondary sm:flex-row sm:items-center sm:justify-between">
             <a href="/forgot-password" className="font-semibold text-accent-primary hover:underline">Forgot password?</a>
             <a href="/sign-up" className="font-semibold text-accent-primary hover:underline">Create account</a>
-          </div>
-          <div className="mt-10 rounded-3xl border border-[rgba(28,25,23,0.08)] bg-bg-secondary p-6 text-center">
-            <p className="text-sm text-text-secondary">Or continue with Google</p>
-            <button type="button" className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-[rgba(28,25,23,0.08)] bg-white px-6 py-3 text-sm font-semibold text-text-primary transition hover:bg-[#fbf2e7]">
-              Continue with Google
-            </button>
           </div>
         </div>
       </section>

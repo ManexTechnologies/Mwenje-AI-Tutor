@@ -5,7 +5,7 @@ Mwenje is an AI-powered learning platform for Zimbabwean high school students. I
 ## Workspace structure
 
 - `frontend/` — Next.js 14 App Router application with Tailwind CSS, custom design tokens, full landing page and app route scaffolding for auth, dashboard, tutor chat, quizzes, essay reviews, planner, progress, teacher view, and profile settings.
-- `backend/` — Express API server with REST endpoints for auth, AI chat, quiz generation, essay feedback, study planning, progress, and leaderboard data. Includes Prisma schema scaffolding.
+- `backend/` — Express API server with REST endpoints for auth, AI chat, quiz generation, essay feedback, study planning, progress, and leaderboard data.
 
 ## Features included in this scaffold
 
@@ -41,14 +41,13 @@ npm run dev:backend
 
 ## Backend configuration
 
-Copy `backend/.env.example` to `backend/.env` and provide your API key and database settings. The scaffold includes placeholders for:
+Copy `backend/.env.example` to `backend/.env` and provide your API key and service settings. The scaffold includes placeholders for:
 
-- `DATABASE_URL`
 - `CLAUDE_API_KEY`
 - `REDIS_URL`
 - `FRONTEND_ORIGIN`
+- `JWT_SECRET`
 
 ## Build verification
 
 The workspace was successfully built after the frontend page and backend endpoint expansion.
-

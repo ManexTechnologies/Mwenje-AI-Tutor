@@ -1,10 +1,24 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { DM_Sans, Playfair_Display } from 'next/font/google'
+import localFont from 'next/font/local'
+import { ProfileProvider } from '@/components/profile-provider'
 import { SiteNav } from '@/components/site-nav'
 
-const playfair = Playfair_Display({ subsets: ['latin'], display: 'swap', variable: '--font-display' })
-const dmSans = DM_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' })
+const playfair = localFont({
+  src: '../public/fonts/playfair-display/6.woff2',
+  display: 'swap',
+  variable: '--font-display',
+  preload: false,
+  weight: '400 900'
+})
+
+const dmSans = localFont({
+  src: '../public/fonts/dm-sans/9.woff2',
+  display: 'swap',
+  variable: '--font-sans',
+  preload: false,
+  weight: '100 1000'
+})
 
 export const metadata: Metadata = {
   title: 'Mwenje — Your guiding light to academic excellence',
@@ -13,10 +27,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
-      <body className="font-sans bg-bg-primary text-text-primary">
-        <SiteNav />
-        {children}
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning className={`${playfair.variable} ${dmSans.variable}`}>
+      <body suppressHydrationWarning className="font-sans bg-bg-primary text-text-primary">
+        <ProfileProvider>
+          <SiteNav />
+          {children}
+        </ProfileProvider>
       </body>
     </html>
   )

@@ -7,10 +7,10 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="min-h-screen bg-bg-primary text-text-primary">
-      <section className="mx-auto max-w-3xl px-6 py-16 md:px-10">
-        <div className="rounded-[32px] border border-[rgba(28,25,23,0.08)] bg-white p-10 shadow-soft">
+      <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
+        <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-soft sm:rounded-[32px] sm:p-10">
           <p className="text-sm uppercase tracking-[0.28em] text-accent-secondary">Forgot password</p>
-          <h1 className="mt-4 text-4xl font-display font-semibold">Reset your password</h1>
+          <h1 className="mt-4 text-3xl font-display font-semibold sm:text-4xl">Reset your password</h1>
           <p className="mt-4 text-text-secondary">Enter your email and we’ll send a secure reset link to help you get back into your account.</p>
           <form className="mt-10 space-y-6">
             <label className="block">

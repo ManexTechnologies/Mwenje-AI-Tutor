@@ -23,8 +23,8 @@ const config: Config = {
         soft: '0 24px 60px rgba(28, 25, 23, 0.08)'
       },
       fontFamily: {
-        display: ['Playfair Display', 'serif'],
-        sans: ['DM Sans', 'ui-sans-serif', 'system-ui']
+        display: ['var(--font-display)', 'serif'],
+        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui']
       }
     }
   },

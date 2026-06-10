@@ -14,6 +14,7 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
+    "@gradio/client": "^2.2.0",
     "concurrently": "^8.0.0",
     "prettier": "^3.0.0"
   }
