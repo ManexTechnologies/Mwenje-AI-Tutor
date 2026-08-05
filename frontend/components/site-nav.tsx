@@ -28,7 +28,7 @@ const mobileNavItems = [...primaryNavItems, ...secondaryNavItems]
 export function SiteNav() {
   const router = useRouter()
   const menuRef = useRef<HTMLDivElement | null>(null)
-  const { user, profile } = useProfile()
+  const { user, profile, refreshAuth } = useProfile()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -42,9 +42,10 @@ export function SiteNav() {
     return () => document.removeEventListener('mousedown', handlePointerDown)
   }, [])
 
-  async function handleSignOut() {
+async function handleSignOut() {
     try {
       await logoutUser()
+      await refreshAuth()
       setIsMenuOpen(false)
       router.push('/')
       router.refresh()

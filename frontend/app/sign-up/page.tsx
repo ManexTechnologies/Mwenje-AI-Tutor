@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSubjectsForGrade } from '@/lib/learning'
 import { signUpUser } from '@/lib/auth'
+import { useProfile } from '@/components/profile-provider'
 
 const grades = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Lower 6', 'Upper 6']
 const curricula = ['ZIMSEC', 'Cambridge']
@@ -16,6 +17,7 @@ function getSignupErrorMessage(error: unknown) {
 
 export default function SignUpPage() {
   const router = useRouter()
+  const { refreshAuth } = useProfile()
   const [form, setForm] = useState({ name: '', email: '', password: '', grade: '', curriculum: 'ZIMSEC' })
   const [step, setStep] = useState(1)
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([])
@@ -62,6 +64,7 @@ export default function SignUpPage() {
         curriculum: form.curriculum,
         subjects: selectedSubjects
       })
+      await refreshAuth()
       router.push('/dashboard')
       router.refresh()
     } catch (err) {

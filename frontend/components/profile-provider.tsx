@@ -11,6 +11,7 @@ type ProfileContextValue = {
   loadingProfile: boolean
   profileError: string | null
   refreshProfile: () => Promise<void>
+  refreshAuth: () => Promise<void>
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null)
@@ -37,6 +38,22 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [profileError, setProfileError] = useState<string | null>(null)
 
+const applyUser = useCallback((nextUser: AppUser | null) => {
+    setUser(nextUser)
+    setAuthReady(true)
+    setProfile(nextUser ? fallbackForUser(nextUser) : null)
+    setProfileError(null)
+  }, [])
+
+  const refreshAuth = useCallback(async () => {
+    try {
+      const nextUser = await getCurrentUser()
+      applyUser(nextUser)
+    } catch (err) {
+      applyUser(null)
+    }
+  }, [applyUser])
+
   const refreshProfile = useCallback(async () => {
     if (!user) {
       setProfile(null)
@@ -60,22 +77,17 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user])
 
-  useEffect(() => {
+useEffect(() => {
     let cancelled = false
 
     getCurrentUser()
       .then((nextUser) => {
         if (cancelled) return
-        setUser(nextUser)
-        setAuthReady(true)
-        setProfile(nextUser ? fallbackForUser(nextUser) : null)
-        setProfileError(null)
+        applyUser(nextUser)
       })
       .catch((err) => {
         if (cancelled) return
-        setUser(null)
-        setAuthReady(true)
-        setProfile(null)
+        applyUser(null)
         setLoadingProfile(false)
         setProfileError(err instanceof Error ? err.message : 'Could not check your sign-in status.')
       })
@@ -83,16 +95,16 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [applyUser])
 
   useEffect(() => {
     if (!authReady) return
     void refreshProfile()
   }, [authReady, refreshProfile])
 
-  const value = useMemo(
-    () => ({ user, authReady, profile, loadingProfile, profileError, refreshProfile }),
-    [user, authReady, profile, loadingProfile, profileError, refreshProfile]
+const value = useMemo(
+    () => ({ user, authReady, profile, loadingProfile, profileError, refreshProfile, refreshAuth }),
+    [user, authReady, profile, loadingProfile, profileError, refreshProfile, refreshAuth]
   )
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>

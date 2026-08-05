@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loginUser } from '@/lib/auth'
+import { useProfile } from '@/components/profile-provider'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { refreshAuth } = useProfile()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,8 +18,9 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    try {
+try {
       await loginUser(email, password)
+      await refreshAuth()
       router.push('/dashboard')
       router.refresh()
     } catch (err) {
