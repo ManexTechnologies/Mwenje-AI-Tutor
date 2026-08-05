@@ -1,28 +1,35 @@
 # Mwenje AI Tutor — Deployment TODO
 
-## ✅ Completed (config files created)
+## ✅ Completed
 - [x] Created `railway.json` (build/deploy config)
 - [x] Created `backend/Procfile` (start command)
 - [x] Added `start` script to `backend/package.json`
 - [x] Created `.railwayignore` (excludes node_modules/.env/build artifacts)
 - [x] Created `DEPLOYMENT.md` (step-by-step guide)
-- [x] Verified backend build → `backend/dist/index.js`
-- [x] Verified frontend build → all 20 routes compiled
-- [x] **Fixed Node.js version issue** — Railway was using Node 18 (build failed: Next.js 16 requires Node ≥20.9)
-  - [x] Added `.node-version` (20.19.0)
-  - [x] Added `nixpacks.toml` (node provider version 20.19.0)
-  - [x] Added `engines.node >=20.9.0` to root, frontend, backend package.json
+- [x] Fixed Node.js version issue (Railway defaulted to Node 18; Next.js 16 needs ≥20.9)
+  - [x] `.node-version` (20.19.0) at repo root, frontend/, backend/
+  - [x] `nixpacks.toml` (nodejs_20)
+  - [x] `engines.node >=20.9.0` in all package.json files
+- [x] **Backend deployed successfully on Railway** ✅
+- [x] **Frontend deployed successfully on Railway** ✅
 
-## 🔲 Manual steps required in Railway dashboard
-- [ ] Commit & push the Node version fix to GitHub `ManexTechnologies/Mwenje-AI-Tutor`
-- [ ] Redeploy the backend service (pull latest)
-- [ ] Redeploy the frontend service (pull latest)
-- [ ] Verify backend `/health` returns `{status:"ok"}`
-- [ ] Verify frontend loads and sign-up/login/quiz flow works
-- [ ] Confirm data persists across restarts (MySQL connected)
+## ✅ Live Configuration
+- [x] **MySQL database provisioned** on Railway (mysql:9.4, volume attached)
+  - DB_HOST=mysql.railway.internal, DB_USER=root, DB_NAME=railway
+- [x] **Backend env vars set**: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, FRONTEND_ORIGIN, PORT=3000, NODE_ENV=production
+- [x] **Frontend env vars set**: NEXT_PUBLIC_API_URL=https://mwenje-backend-production.up.railway.app, PORT=3000
+- [x] **Port configured** to 3000 on both services
+- [x] **Backend redeployed** (SUCCESS) with DB + env vars
+- [x] **Frontend redeployed** (SUCCESS) with NEXT_PUBLIC_API_URL
 
-## Railway service config (already set up in dashboard)
-- Backend service: root dir repo root, start `npm --workspace=backend run start`
-  - env: PORT=4000, NODE_ENV=production, DB_*, JWT_SECRET, FRONTEND_ORIGIN, CLAUDE_API_KEY(optional)
-- Frontend service: root dir `frontend`, start `npm run start`
-  - build env: NEXT_PUBLIC_API_URL=https://<backend>.up.railway.app
+## ✅ Verification
+- [x] Backend `/health` → `{status:"ok", service:"mwenje-backend"}`
+- [x] Frontend → HTTP 200, title contains "Mwenje"
+- [x] Backend `/subjects` → returns 9 subjects
+- [x] **Sign-up works** → created user id=1 in MySQL (DB connection confirmed)
+
+## 🔲 Optional next steps
+- [ ] Set `CLAUDE_API_KEY` on backend for real AI responses (currently falls back to stub mode)
+- [ ] Point a custom domain at the Railway services
+- [ ] Replace the placeholder JWT_SECRET with a strong random value
+</content>
