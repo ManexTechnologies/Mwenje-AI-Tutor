@@ -17,6 +17,9 @@ Your GitHub repo: `https://github.com/ManexTechnologies/Mwenje-AI-Tutor`
 - A [Railway](https://railway.app) account
 - Push this project to your GitHub repo if not already there:
 
+> ⚠️ **Node.js version requirement**: Next.js 16 requires **Node.js ≥ 20.9.0**.
+> This repo pins Node via `.node-version` (20.19.0), `nixpacks.toml`, and `engines` fields in all `package.json` files. If builds fail with `Node.js 18.20.5 is required`, confirm these files are committed to the repo.
+
 ```bash
 git add .
 git commit -m "Add Railway deployment config"
