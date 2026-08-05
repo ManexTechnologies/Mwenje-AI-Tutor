@@ -49,7 +49,7 @@ export function setSessionCookie(res: Response, token: string) {
   const isProduction = process.env.NODE_ENV === 'production'
   res.cookie(cookieName, token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     secure: isProduction,
     maxAge: sessionMaxAgeSeconds * 1000,
     path: '/'
@@ -59,7 +59,7 @@ export function setSessionCookie(res: Response, token: string) {
 export function clearSessionCookie(res: Response) {
   res.clearCookie(cookieName, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/'
   })
