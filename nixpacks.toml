@@ -1,2 +1,8 @@
-[providers.node]
-version = "20.19.0"
+# Nixpacks configuration for Mwenje AI Tutor
+# Node version is pinned via .node-version (20.19.0) at repo root and each workspace.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
+
+[phases.install]
+cmds = ["npm install"]
