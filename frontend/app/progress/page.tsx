@@ -27,7 +27,7 @@ type LeaderboardEntry = {
   masteryAverage: number
 }
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const apiBase = '/backend'
 
 export default function ProgressPage() {
   const { user, authReady } = useProfile()

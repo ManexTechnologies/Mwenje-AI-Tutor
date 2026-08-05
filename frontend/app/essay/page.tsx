@@ -31,7 +31,7 @@ const levelDescriptions: Record<string, string> = {
   Extended: 'Polished, analytical essay for a high-performing student.'
 }
 const wordCounts = [300, 500, 800, 1000]
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const apiBase = '/backend'
 
 type EssayResult = {
   title: string

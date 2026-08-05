@@ -19,8 +19,6 @@ type ProfileFallback = Partial<LearningProfile> & {
   subjects: string[]
 }
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-
 function withTimeout<T>(promise: Promise<T>, milliseconds: number, message: string) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined
 
@@ -69,7 +67,7 @@ async function readProfileResponse(response: Response, fallback: ProfileFallback
 
 export async function loadUserProfile(fallback: ProfileFallback, timeoutMs = 3500) {
   const response = await withTimeout(
-    fetchWithAuth(`${apiBase}/profile`),
+fetchWithAuth('/profile'),
     timeoutMs,
     'Profile is taking too long to load. Showing account defaults for now.'
   )
@@ -79,7 +77,7 @@ export async function loadUserProfile(fallback: ProfileFallback, timeoutMs = 350
 
 export async function saveUserProfile(profile: LearningProfile, fallback: ProfileFallback, timeoutMs = 5000) {
   const response = await withTimeout(
-    fetchWithAuth(`${apiBase}/profile`, {
+fetchWithAuth('/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile)

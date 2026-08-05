@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { useProfile } from '@/components/profile-provider'
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const apiBase = '/backend'
 
 type LeaderboardEntry = {
   uid: string

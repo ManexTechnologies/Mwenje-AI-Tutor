@@ -1,4 +1,4 @@
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+import { apiBase } from './apiBase'
 
 export type AppUser = {
   uid: string

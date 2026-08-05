@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useProfile } from '@/components/profile-provider'
 import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { difficulties, subjects, subjectTopics } from '@/lib/learning'
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const apiBase = '/backend'
 
 type QuizQuestion = {
   id: string
