@@ -8,6 +8,10 @@ export type LearningProfile = {
   grade: string
   curriculum: string
   subjects: string[]
+  learningGoals: string[]
+  preferredLearningStyle: string
+  weakAreas: string[]
+  examinationYear: number | null
   role: string
 }
 
@@ -26,6 +30,10 @@ type ProfileRow = RowDataPacket & {
   grade: string
   curriculum: string
   subjects: string | string[]
+  learning_goals: string | string[] | null
+  preferred_learning_style: string | null
+  weak_areas: string | string[] | null
+  examination_year: number | null
   role: string
 }
 
@@ -51,6 +59,12 @@ function normalizeProfile(data: ProfileInput | undefined, fallback: LearningProf
     grade: String(data?.grade || fallback.grade || ''),
     curriculum: String(data?.curriculum || fallback.curriculum || 'ZIMSEC'),
     subjects: normalizeSubjects(data?.subjects, fallback.subjects),
+    learningGoals: normalizeSubjects((data as any)?.learningGoals ?? (data as any)?.learning_goals, fallback.learningGoals),
+    preferredLearningStyle: String((data as any)?.preferredLearningStyle ?? (data as any)?.preferred_learning_style ?? fallback.preferredLearningStyle ?? ''),
+    weakAreas: normalizeSubjects((data as any)?.weakAreas ?? (data as any)?.weak_areas, fallback.weakAreas),
+    examinationYear: Number.isFinite(Number((data as any)?.examinationYear ?? (data as any)?.examination_year))
+      ? Number((data as any)?.examinationYear ?? (data as any)?.examination_year)
+      : fallback.examinationYear,
     role: String(data?.role || fallback.role || 'STUDENT')
   }
 }
@@ -62,7 +76,11 @@ export function buildProfileFallback(user: { name?: string; email?: string }): L
     school: '',
     grade: '',
     curriculum: 'ZIMSEC',
-    subjects: ['Maths', 'English'],
+    subjects: ['Mathematics', 'English Language'],
+    learningGoals: ['Improve exam performance'],
+    preferredLearningStyle: 'step-by-step examples',
+    weakAreas: [],
+    examinationYear: null,
     role: 'STUDENT'
   }
 }
@@ -73,7 +91,8 @@ export async function getProfile(uid: string, fallback: LearningProfile) {
   }
 
   const [rows] = await getPool().execute<ProfileRow[]>(
-    `SELECT users.name, users.email, users.role, profiles.school, profiles.grade, profiles.curriculum, profiles.subjects
+    `SELECT users.name, users.email, users.role, profiles.school, profiles.grade, profiles.curriculum, profiles.subjects,
+       profiles.learning_goals, profiles.preferred_learning_style, profiles.weak_areas, profiles.examination_year
      FROM users
      LEFT JOIN profiles ON profiles.user_id = users.id
      WHERE users.id = ?`,
@@ -88,6 +107,10 @@ export async function getProfile(uid: string, fallback: LearningProfile) {
     grade: row.grade,
     curriculum: row.curriculum,
     subjects: row.subjects,
+    learningGoals: normalizeSubjects(row.learning_goals, fallback.learningGoals),
+    preferredLearningStyle: row.preferred_learning_style || '',
+    weakAreas: normalizeSubjects(row.weak_areas, fallback.weakAreas),
+    examinationYear: row.examination_year,
     role: row.role
   } : undefined, fallback)
 }
@@ -109,14 +132,28 @@ export async function saveProfile(uid: string, input: ProfileInput, fallback: Le
   )
 
   await executor.execute(
-    `INSERT INTO profiles (user_id, school, grade, curriculum, subjects)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO profiles (user_id, school, grade, curriculum, subjects, learning_goals, preferred_learning_style, weak_areas, examination_year)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        school = VALUES(school),
        grade = VALUES(grade),
        curriculum = VALUES(curriculum),
-       subjects = VALUES(subjects)`,
-    [userId, profile.school, profile.grade, profile.curriculum, JSON.stringify(profile.subjects)]
+       subjects = VALUES(subjects),
+       learning_goals = VALUES(learning_goals),
+       preferred_learning_style = VALUES(preferred_learning_style),
+       weak_areas = VALUES(weak_areas),
+       examination_year = VALUES(examination_year)`,
+    [
+      userId,
+      profile.school,
+      profile.grade,
+      profile.curriculum,
+      JSON.stringify(profile.subjects),
+      JSON.stringify(profile.learningGoals),
+      profile.preferredLearningStyle,
+      JSON.stringify(profile.weakAreas),
+      profile.examinationYear
+    ]
   )
 
   return profile

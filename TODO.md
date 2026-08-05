@@ -1,37 +1,26 @@
-# Mwenje AI Tutor TODO
+# Mwenje AI Tutor — Deployment TODO
 
-This file captures the project scope from the prompt, what has been completed, and what remains to verify.
+## ✅ Completed (config files created)
+- [x] Created `railway.json` (build/deploy config)
+- [x] Created `backend/Procfile` (start command)
+- [x] Added `start` script to `backend/package.json`
+- [x] Created `.railwayignore` (excludes node_modules/.env/build artifacts)
+- [x] Created `DEPLOYMENT.md` (step-by-step guide)
+- [x] Verified backend build → `backend/dist/index.js`
+- [x] Verified frontend build → all 20 routes compiled
 
-## Completed / Implemented
-
-- [x] Frontend scaffold using Next.js 14 App Router and Tailwind CSS.
-- [x] Landing page and main app route scaffolding.
-- [x] Sign up, log in, and forgot password screens.
-- [x] Backend Express server scaffold with REST routes.
-- [x] Protected backend routes for AI, progress, and leaderboard APIs.
-- [x] Frontend helper for authenticated fetch requests (ID token in Authorization header).
-- [x] Navigation updated to show authenticated user name and sign-out action.
-- [x] User menu with avatar/profile link instead of plain name text.
-- [x] Progress persistence and leaderboard scoring backed by the protected backend API.
-- [x] Unit/integration tests for auth and protected backend routes.
-
-## Features included in scaffold
-
-- AI tutor chat page shell.
-- Quiz engine page shell.
-- Essay feedback page shell.
-- Study planner and progress tracker shells.
-- Teacher dashboard and profile settings page shells.
-- Backend routes for `/auth`, `/ai`, `/progress`, `/leaderboard`.
-
-## Items requiring verification or follow-up
-
-- [ ] Validate end-to-end sign-up/login flow in the running app.
-- [ ] Confirm frontend navigation updates immediately after authentication.
-- [ ] Add backend testing steps to README and verify local commands.
-- [ ] Verify AI and content generation routes return production-ready responses or properly stubbed defaults.
-- [ ] Confirm `backend/src/lib/auth.ts` can be removed once no imports depend on it.
-
-## Optional enhancements
-
-- [ ] Add a server-side user profile endpoint for frontend profile data.
+## 🔲 Manual steps required in Railway dashboard
+- [ ] Push latest changes to GitHub `ManexTechnologies/Mwenje-AI-Tutor`
+- [ ] Create Railway project
+- [ ] Add MySQL plugin (copy connection vars)
+- [ ] Create Backend service (root dir: repo root, start: `npm --workspace=backend run start`)
+  - [ ] Set env: PORT=4000, NODE_ENV=production
+  - [ ] Set env: DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME (or DATABASE_URL)
+  - [ ] Set env: JWT_SECRET (random string)
+  - [ ] Set env: FRONTEND_ORIGIN = https://<frontend>.up.railway.app
+  - [ ] Optional: CLAUDE_API_KEY
+- [ ] Create Frontend service (root dir: `frontend`, start: `npm run start`)
+  - [ ] Set build env: NEXT_PUBLIC_API_URL = https://<backend>.up.railway.app
+- [ ] Deploy backend, verify `/health` returns `{status:"ok"}`
+- [ ] Deploy frontend, verify sign-up/login/quiz flow
+- [ ] Confirm data persists across restarts (MySQL connected)

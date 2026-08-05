@@ -7,11 +7,13 @@ import { askClaude } from './lib/claude'
 import { generatePracticeQuestions } from './lib/practice'
 import { generateQuiz } from './lib/quiz'
 import { clearSessionCookie, setSessionCookie, signSession } from './lib/session'
-import { ensureMysqlSchema } from './lib/mysql'
+import { ensureMysqlSchema, getPool } from './lib/mysql'
+import { createTutorRouter } from './routes/tutor'
 import { verifySession } from './middleware/verifySession'
 import { createUser, validateLogin } from './services/authStore'
 import { buildProfileFallback, getProfile, saveProfile } from './services/profileStore'
 import { getLeaderboard, getUserProgress, recordQuizResult } from './services/progressStore'
+import { generateLocalStudyPlan, getLatestStudyPlan, saveStudyPlan } from './services/studyPlanner'
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
 dotenv.config()
@@ -339,15 +341,30 @@ function buildSampleEssay(subject: string, topic: string, level: string, wordCou
 export function createApp() {
   const app = express()
 
-  app.use(cors({ origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000', credentials: true }))
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://192.168.1.95:3000',
+    process.env.FRONTEND_ORIGIN
+  ].filter(Boolean) as string[]
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true)
+      if (allowedOrigins.includes(origin)) return callback(null, true)
+      return callback(null, false)
+    },
+    credentials: true
+  }))
   app.use(express.json())
-  app.use(async (_req, res, next) => {
-    try {
-      await ensureMysqlSchema()
-      next()
-    } catch (error) {
-      res.status(500).json({ error: 'Database is not ready', details: error instanceof Error ? error.message : String(error) })
-    }
+
+  const schemaInitialization = ensureMysqlSchema().catch((error) => {
+    console.warn('Database initialization failed:', error instanceof Error ? error.message : String(error))
+  })
+
+  app.use(async (_req, _res, next) => {
+    await schemaInitialization
+    next()
   })
 
   app.get('/health', (_req, res) => {
@@ -357,21 +374,25 @@ export function createApp() {
   app.get('/subjects', (_req, res) => {
     res.json({
       subjects: [
-        'Maths',
-        'English',
+        'Mathematics',
+        'English Language',
         'Physics',
         'Chemistry',
         'Biology',
         'History',
         'Geography',
-        'Commerce',
-        'Principles of Accounting',
-        'Accounting',
-        'Shona',
-        'French'
+        'Accounts',
+        'Computer Science'
       ]
     })
   })
+
+  app.use('/api/tutor', verifySession, createTutorRouter(getPool()))
+
+  function isDatabaseUnavailableError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    return /ECONNREFUSED|ENOTFOUND|ER_BAD_DB_ERROR|ER_ACCESS_DENIED_ERROR|Database is not ready/i.test(message)
+  }
 
   app.post('/auth/signup', async (req, res) => {
     try {
@@ -387,6 +408,9 @@ export function createApp() {
       setSessionCookie(res, signSession(user))
       return res.status(201).json({ user })
     } catch (error) {
+      if (isDatabaseUnavailableError(error)) {
+        return res.status(503).json({ error: 'Authentication service is unavailable. Please try again later.' })
+      }
       return res.status(400).json({ error: error instanceof Error ? error.message : String(error) })
     }
   })
@@ -397,6 +421,9 @@ export function createApp() {
       setSessionCookie(res, signSession(user))
       return res.json({ user })
     } catch (error) {
+      if (isDatabaseUnavailableError(error)) {
+        return res.status(503).json({ error: 'Authentication service is unavailable. Please try again later.' })
+      }
       return res.status(401).json({ error: error instanceof Error ? error.message : String(error) })
     }
   })
@@ -450,6 +477,10 @@ export function createApp() {
           grade: req.body?.grade || '',
           curriculum: req.body?.curriculum || 'ZIMSEC',
           subjects,
+          learningGoals: Array.isArray(req.body?.learningGoals) ? req.body.learningGoals : [],
+          preferredLearningStyle: req.body?.preferredLearningStyle || '',
+          weakAreas: Array.isArray(req.body?.weakAreas) ? req.body.weakAreas : [],
+          examinationYear: req.body?.examinationYear ?? null,
           role: req.body?.role || 'STUDENT'
         },
         fallback
@@ -482,6 +513,54 @@ export function createApp() {
 
     const quiz = await generateQuiz(String(subject), String(topic), String(difficulty))
     return res.json({ quiz })
+  })
+
+  app.post('/ai/quiz/mark', verifySession, async (req, res) => {
+    const user = (req as any).user
+    const { quiz, answers, durationSeconds } = req.body
+    const questions = Array.isArray(quiz?.questions) ? quiz.questions : []
+
+    if (!quiz?.subject || !questions.length || !answers || typeof answers !== 'object') {
+      return res.status(400).json({ error: 'quiz and answers are required' })
+    }
+
+    const markedQuestions = questions.map((question: any) => {
+      const selected = String(answers[question.id] || '')
+      const correct = selected === question.answer
+      return {
+        id: question.id,
+        prompt: question.prompt,
+        selected,
+        answer: question.answer,
+        correct,
+        explanation: question.explanation || `The correct answer is ${question.answer}.`
+      }
+    })
+    const correctAnswers = markedQuestions.filter((question: { correct: boolean }) => question.correct).length
+    const score = Math.round((correctAnswers / questions.length) * 100)
+
+    const progress = await recordQuizResult(user.uid, user.name || user.email, {
+      subject: String(quiz.subject),
+      topic: String(quiz.topic || ''),
+      difficulty: String(quiz.difficulty || ''),
+      score,
+      totalQuestions: questions.length,
+      correctAnswers,
+      durationSeconds: Number.isFinite(Number(durationSeconds)) ? Number(durationSeconds) : undefined
+    })
+
+    return res.status(201).json({
+      result: {
+        subject: quiz.subject,
+        topic: quiz.topic || '',
+        difficulty: quiz.difficulty || '',
+        score,
+        totalQuestions: questions.length,
+        correctAnswers,
+        markedQuestions
+      },
+      progress
+    })
   })
 
   app.post('/ai/practice', async (req, res) => {
@@ -584,15 +663,37 @@ export function createApp() {
     })
   })
 
-  app.post('/ai/planner', verifySession, (req, res) => {
-    res.json({
-      schedule: [
-        { day: 'Monday', task: 'Maths revision - algebra and graphs' },
-        { day: 'Wednesday', task: 'English essay practice - paragraph structure' },
-        { day: 'Friday', task: 'Science quick-review - circuits and forces' }
-      ],
-      generatedAt: new Date().toISOString()
+  app.get('/ai/planner/latest', verifySession, async (req, res) => {
+    const user = (req as any).user
+    const plan = await getLatestStudyPlan(user.uid)
+    res.json({ plan })
+  })
+
+  app.post('/ai/planner', verifySession, async (req, res) => {
+    const user = (req as any).user
+    const fallback = buildProfileFallback({ name: user.name, email: user.email })
+    const profile = await getProfile(user.uid, fallback)
+    const subjects = Array.isArray(req.body?.subjects) && req.body.subjects.length
+      ? req.body.subjects.map((subject: unknown) => String(subject).trim()).filter(Boolean)
+      : profile.subjects
+    const weakSubjects = Array.isArray(req.body?.weakSubjects) && req.body.weakSubjects.length
+      ? req.body.weakSubjects.map((subject: unknown) => String(subject).trim()).filter(Boolean)
+      : profile.weakAreas.length
+        ? profile.weakAreas
+        : subjects.slice(0, 1)
+    const hoursPerDay = Math.max(1, Math.min(8, Number(req.body?.hoursPerDay) || 2))
+    const examDate = req.body?.examDate ? String(req.body.examDate) : undefined
+
+    const plan = generateLocalStudyPlan({
+      subjects,
+      weakSubjects,
+      hoursPerDay,
+      examDate,
+      weakAreas: profile.weakAreas
     })
+    await saveStudyPlan(user.uid, { subjects, weakSubjects, hoursPerDay, examDate, weakAreas: profile.weakAreas }, plan)
+
+    res.json({ plan })
   })
 
   app.get('/progress', verifySession, async (req, res) => {
@@ -603,14 +704,22 @@ export function createApp() {
 
   app.post('/progress/quiz-result', verifySession, async (req, res) => {
     const user = (req as any).user
-    const { subject, score, totalQuestions } = req.body
+    const { subject, score, totalQuestions, topic, difficulty, correctAnswers, durationSeconds } = req.body
 
     if (!subject || typeof score !== 'number') {
       return res.status(400).json({ error: 'subject and numeric score are required' })
     }
 
     try {
-      const progress = await recordQuizResult(user.uid, user.name || user.email, { subject, score, totalQuestions })
+      const progress = await recordQuizResult(user.uid, user.name || user.email, {
+        subject,
+        score,
+        totalQuestions,
+        topic,
+        difficulty,
+        correctAnswers,
+        durationSeconds
+      })
       return res.status(201).json(progress)
     } catch (error) {
       return res.status(400).json({ error: error instanceof Error ? error.message : String(error) })

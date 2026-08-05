@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProfile } from '@/components/profile-provider'
 import { subjects as allSubjects } from '@/lib/learning'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
@@ -38,9 +39,12 @@ export default function TutorPage() {
     name: 'there',
     grade: '',
     curriculum: 'ZIMSEC',
-    subjects: ['Maths', 'English']
+    subjects: ['Mathematics', 'English Language']
   })
-  const [subject, setSubject] = useState('Maths')
+  const [subject, setSubject] = useState('Mathematics')
+  const [formLevel, setFormLevel] = useState('Form 4')
+  const [mode, setMode] = useState<'explain' | 'exam_practice' | 'general'>('explain')
+  const [sessionId, setSessionId] = useState<number | null>(null)
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -79,30 +83,46 @@ export default function TutorPage() {
     setStatus(null)
 
     try {
-      const prompt = [
-        `Student: ${profile.name}`,
-        profile.grade ? `Grade/Form: ${profile.grade}` : '',
-        `Curriculum: ${profile.curriculum}`,
-        `Subject: ${subject}`,
-        'Tutor behaviour: be warm, clear, Zimbabwe-aware, and guide the student step by step. Use the Socratic method when helpful. Do not simply do homework; help the student understand the method.',
-        '',
-        `Student question: ${trimmedMessage}`
-      ].filter(Boolean).join('\n')
-
-      const res = await fetch(`${apiBase}/ai/chat`, {
+      const res = user ? await fetchWithAuth(`${apiBase}/api/tutor/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message: prompt })
+        body: JSON.stringify({ subject, grade: formLevel, mode, prompt: trimmedMessage, session_id: sessionId || undefined })
+      }) : await fetch(`${apiBase}/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, message: trimmedMessage })
       })
 
       if (!res.ok) throw new Error('Mwenje could not answer right now.')
-      const data = (await res.json()) as { aiResponse: unknown }
-      setMessages((current) => [...current, { role: 'ai', text: getReplyText(data.aiResponse) }])
+      const data = (await res.json()) as { aiResponse?: unknown; message?: { content: string }; session_id?: number }
+      if (data.session_id) setSessionId(data.session_id)
+      setMessages((current) => [...current, { role: 'ai', text: data.message?.content || getReplyText(data.aiResponse) }])
     } catch (e) {
       setMessages((current) => [
         ...current,
         { role: 'ai', text: e instanceof Error ? e.message : 'Mwenje could not answer right now.' }
       ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateQuizFromSession = async () => {
+    const lastUserMessage = [...messages].reverse().find((item) => item.role === 'user')?.text || 'current lesson'
+    setLoading(true)
+    setStatus('Generating quiz from this lesson...')
+    try {
+      const res = await fetch(`${apiBase}/ai/quiz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, topic: lastUserMessage.slice(0, 120), difficulty: 'Core' })
+      })
+      if (!res.ok) throw new Error('Could not generate quiz from this lesson.')
+      const data = await res.json()
+      window.localStorage.setItem('mwenjeTutorQuiz', JSON.stringify(data.quiz))
+      window.location.href = '/quiz?fromTutor=1'
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : 'Could not generate quiz from this lesson.')
     } finally {
       setLoading(false)
     }
@@ -114,6 +134,13 @@ export default function TutorPage() {
     'Give me a practice question',
     'What should I know for exams?',
     'Show me a worked example'
+  ]
+
+  const quickActions = [
+    { label: 'Simpler', prompt: `Explain ${subject} in a simpler way for a student at ${formLevel}.` },
+    { label: 'Examples', prompt: `Give me worked examples for ${subject} at ${formLevel}.` },
+    { label: 'Shona', prompt: `Explain ${subject} in Shona with simple examples.` },
+    { label: 'Quiz', prompt: `Generate a quick quiz from this lesson on ${subject}.` }
   ]
 
   return (
@@ -149,6 +176,32 @@ export default function TutorPage() {
                 </button>
               ))}
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {['Form 1', 'Form 2', 'Form 3', 'Form 4', 'O Level', 'A Level'].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setFormLevel(item)}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${item === formLevel ? 'border-accent-primary bg-[#FFF0E6] text-accent-primary' : 'border-[rgba(28,25,23,0.08)] bg-bg-secondary text-text-secondary'}`}
+                >
+                  {item}
+                </button>
+              ))}
+              {[
+                ['explain', 'Explain'],
+                ['exam_practice', 'Exam practice'],
+                ['general', 'General']
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value as typeof mode)}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${value === mode ? 'border-accent-secondary bg-[#FFF8E6] text-accent-primary' : 'border-[rgba(28,25,23,0.08)] bg-bg-secondary text-text-secondary'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex min-h-[calc(100svh-18rem)] flex-col lg:min-h-[620px]">
@@ -175,17 +228,31 @@ export default function TutorPage() {
             </div>
 
             {messages.length <= 2 ? (
-              <div className="flex gap-2 overflow-x-auto border-t border-[rgba(28,25,23,0.08)] px-5 py-3 sm:px-8">
-                {suggestions.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setMessage(item)}
-                    className="shrink-0 rounded-full border border-[rgba(28,25,23,0.08)] bg-bg-secondary px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-[#fbf2e7]"
-                  >
-                    {item}
-                  </button>
-                ))}
+              <div className="space-y-3 border-t border-[rgba(28,25,23,0.08)] px-5 py-3 sm:px-8">
+                <div className="flex gap-2 overflow-x-auto">
+                  {suggestions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setMessage(item)}
+                      className="shrink-0 rounded-full border border-[rgba(28,25,23,0.08)] bg-bg-secondary px-4 py-2 text-sm font-medium text-text-secondary transition hover:bg-[#fbf2e7]"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {quickActions.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => setMessage(item.prompt)}
+                      className="shrink-0 rounded-full border border-accent-primary/20 bg-[#FFF0E6] px-4 py-2 text-sm font-semibold text-accent-primary transition hover:bg-[#ffe3cc]"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
 
@@ -216,6 +283,14 @@ export default function TutorPage() {
                 className="inline-flex h-[52px] shrink-0 items-center justify-center rounded-full bg-accent-primary px-6 text-sm font-semibold text-white shadow-soft hover:bg-[#b55a26] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {loading ? '...' : 'Send'}
+              </button>
+              <button
+                type="button"
+                onClick={generateQuizFromSession}
+                disabled={loading || messages.filter((item) => item.role === 'user').length === 0}
+                className="inline-flex h-[52px] shrink-0 items-center justify-center rounded-full border border-accent-primary px-6 text-sm font-semibold text-accent-primary hover:bg-[#FFF0E6] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                Generate Quiz
               </button>
             </div>
           </div>

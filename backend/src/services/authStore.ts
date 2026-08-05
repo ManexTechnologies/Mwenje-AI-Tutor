@@ -13,10 +13,14 @@ type UserRow = RowDataPacket & {
   subscription_plan: string
 }
 
-const proEmails = new Set(['mamvuraemmmanuel@gmail.com'])
+const subscribedEmails = new Set(['mamvuraemmmanuel@gmail.com'])
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
+}
 
 function getInitialSubscriptionPlan(email: string) {
-  return proEmails.has(email.trim().toLowerCase()) ? 'pro' : 'free-trial'
+  return subscribedEmails.has(normalizeEmail(email)) ? 'pro' : 'free-trial'
 }
 
 function toSessionUser(row: Pick<UserRow, 'id' | 'email' | 'name' | 'role' | 'subscription_plan'>): SessionUser {
@@ -46,9 +50,9 @@ export async function createUser(input: {
   subjects?: string[]
 }) {
   const name = input.name.trim()
-  const email = input.email.trim().toLowerCase()
+  const email = normalizeEmail(input.email)
   const password = input.password
-  const subjects = input.subjects?.length ? input.subjects : ['Maths', 'English']
+  const subjects = input.subjects?.length ? input.subjects : ['Mathematics', 'English Language']
   const subscriptionPlan = getInitialSubscriptionPlan(email)
 
   if (!name) throw new Error('Name is required')
@@ -88,7 +92,7 @@ export async function createUser(input: {
 }
 
 export async function validateLogin(emailInput: string, password: string) {
-  const email = emailInput.trim().toLowerCase()
+  const email = normalizeEmail(emailInput)
   const [rows] = await getPool().execute<UserRow[]>('SELECT id, email, password_hash, name, role, subscription_plan FROM users WHERE email = ?', [email])
   const user = rows[0]
 

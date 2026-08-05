@@ -7,6 +7,10 @@ export type LearningProfile = {
   grade: string
   curriculum: string
   subjects: string[]
+  learningGoals: string[]
+  preferredLearningStyle: string
+  weakAreas: string[]
+  examinationYear: number | null
 }
 
 type ProfileFallback = Partial<LearningProfile> & {
@@ -38,7 +42,11 @@ function normalizeProfile(data: Partial<LearningProfile> | undefined, fallback: 
     school: data?.school || fallback.school || '',
     grade: data?.grade || fallback.grade || '',
     curriculum: data?.curriculum || fallback.curriculum || 'ZIMSEC',
-    subjects
+    subjects,
+    learningGoals: Array.isArray(data?.learningGoals) ? data.learningGoals : [],
+    preferredLearningStyle: data?.preferredLearningStyle || '',
+    weakAreas: Array.isArray(data?.weakAreas) ? data.weakAreas : [],
+    examinationYear: typeof data?.examinationYear === 'number' ? data.examinationYear : null
   }
 }
 

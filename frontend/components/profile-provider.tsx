@@ -22,7 +22,11 @@ function fallbackForUser(user: AppUser): LearningProfile {
     school: '',
     grade: '',
     curriculum: 'ZIMSEC',
-    subjects: ['Maths', 'English']
+    subjects: ['Mathematics', 'English Language'],
+    learningGoals: ['Improve exam performance'],
+    preferredLearningStyle: 'step-by-step examples',
+    weakAreas: [],
+    examinationYear: null
   }
 }
 

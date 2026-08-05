@@ -27,7 +27,7 @@ export type QueryMode = 'explain' | 'exam_practice' | 'essay_feedback' | 'quiz' 
 export interface TutorRequest {
   prompt: string
   subject: string
-  grade?: 'O Level' | 'A Level'
+  grade?: 'Form 1' | 'Form 2' | 'Form 3' | 'Form 4' | 'O Level' | 'A Level'
   mode?: QueryMode
   conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 }
@@ -245,19 +245,6 @@ function buildLocalTutorFallback(subject: string, mode: QueryMode = 'general'): 
 }
 
 // ─── Hugging Face fallback ─────────────────────────────────────────────────────
-
-function parseGradioEventData(eventStream: string) {
-  const dataLine = eventStream
-    .split(/\r?\n/)
-    .find((line) => line.startsWith('data: ') && line !== 'data: null')
-
-  if (!dataLine) {
-    throw new Error('Hugging Face study assistant returned no data')
-  }
-
-  const parsed = JSON.parse(dataLine.slice('data: '.length))
-  return Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed
-}
 
 async function askStudyAssistant(request: TutorRequest) {
   const { prompt, subject } = request

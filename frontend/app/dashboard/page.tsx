@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useProfile } from '@/components/profile-provider'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { subjectTopics, subjects as allSubjects } from '@/lib/learning'
 import type { LearningProfile } from '@/lib/profile'
 
@@ -11,13 +12,27 @@ type SubjectProgress = {
   mastery: number
 }
 
+type ProgressResponse = {
+  mastery: Array<{ subject: string; score: number }>
+  masteryAverage: number
+  streakDays: number
+  xpPoints: number
+  recentQuizzes?: Array<{ subject: string; topic: string; score: number; createdAt: string }>
+}
+
+const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
 const defaultProfile: LearningProfile = {
   name: 'Learner',
   email: '',
   school: '',
   grade: '',
   curriculum: 'ZIMSEC',
-  subjects: ['Maths', 'English']
+  subjects: ['Mathematics', 'English Language'],
+  learningGoals: ['Improve exam performance'],
+  preferredLearningStyle: 'step-by-step examples',
+  weakAreas: [],
+  examinationYear: null
 }
 
 function getGreeting(date: Date) {
@@ -85,6 +100,7 @@ function buildTodayPlan(profile: LearningProfile) {
 export default function DashboardPage() {
   const { user: currentUser, profile: loadedProfile, loadingProfile, profileError } = useProfile()
   const [now, setNow] = useState<Date | null>(null)
+  const [progress, setProgress] = useState<ProgressResponse | null>(null)
   const profile = loadedProfile || defaultProfile
 
   useEffect(() => {
@@ -93,9 +109,29 @@ export default function DashboardPage() {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    if (!currentUser) return
+    let cancelled = false
+    fetchWithAuth(`${apiBase}/progress`)
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = await res.json() as ProgressResponse
+        if (!cancelled) setProgress(data)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser])
+
   const firstName = getFirstName(profile)
   const profileSubjects = useMemo(() => getProfileSubjectFallback(profile), [profile])
-  const subjectProgress = useMemo(() => buildSubjectProgress(profile), [profile])
+  const subjectProgress = useMemo(() => {
+    if (progress?.mastery.length) {
+      return progress.mastery.map((item) => ({ subject: item.subject, mastery: item.score }))
+    }
+    return buildSubjectProgress(profile)
+  }, [profile, progress])
   const todayPlan = useMemo(() => buildTodayPlan(profile), [profile])
   const gradeLabel = profile.grade || 'Grade not set'
   const subjectSummary = profileSubjects.slice(0, 3).join(', ')
@@ -109,6 +145,14 @@ export default function DashboardPage() {
             <p className="text-sm uppercase tracking-[0.28em] text-accent-secondary">
               {now ? getGreeting(now) : 'Welcome'}, {firstName}
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="rounded-full bg-[#E8F6F0] px-3 py-1 text-sm font-semibold text-[#1D6B4A]">
+                {currentUser?.subscriptionPlan === 'pro' ? 'Subscribed' : 'Free trial'}
+              </span>
+              {currentUser?.subscriptionPlan === 'pro' ? (
+                <span className="text-sm font-semibold text-accent-primary">Unlimited tutor access</span>
+              ) : null}
+            </div>
             <h1 className="mt-4 text-2xl font-display font-semibold text-text-primary sm:text-4xl">
               {profile.grade ? `${profile.grade} dashboard` : 'Your learning dashboard'}
             </h1>
@@ -170,6 +214,20 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-sm">
+                <p className="text-sm text-text-secondary">XP</p>
+                <p className="mt-2 text-3xl font-semibold text-text-primary">{progress?.xpPoints || 0}</p>
+              </div>
+              <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-sm">
+                <p className="text-sm text-text-secondary">Streak</p>
+                <p className="mt-2 text-3xl font-semibold text-text-primary">{progress?.streakDays || 0}d</p>
+              </div>
+              <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-sm">
+                <p className="text-sm text-text-secondary">Mastery</p>
+                <p className="mt-2 text-3xl font-semibold text-text-primary">{progress?.masteryAverage || 0}%</p>
+              </div>
+            </div>
             <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-sm sm:rounded-[32px] sm:p-8">
               <p className="text-sm uppercase tracking-[0.24em] text-accent-secondary">Your subjects</p>
               <div className="mt-5 flex flex-wrap gap-2">
@@ -207,6 +265,12 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-text-secondary">Curriculum</span>
                   <span className="text-right font-semibold">{profile.curriculum}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-text-secondary">Subscription</span>
+                  <span className={`text-right font-semibold ${currentUser?.subscriptionPlan === 'pro' ? 'text-[#1D6B4A]' : 'text-text-primary'}`}>
+                    {currentUser?.subscriptionPlan === 'pro' ? 'Subscribed' : 'Free trial'}
+                  </span>
                 </div>
                 {profile.school ? (
                   <div className="flex items-center justify-between gap-4">

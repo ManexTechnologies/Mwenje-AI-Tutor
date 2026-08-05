@@ -5,6 +5,7 @@ type QuizQuestion = {
   prompt: string
   options: string[]
   answer: string
+  explanation: string
 }
 
 export type GeneratedQuiz = {
@@ -54,7 +55,8 @@ function normalizeQuiz(data: any, subject: string, topic: string, difficulty: st
         id: String(question.id || `q${index + 1}`),
         prompt: String(question.prompt),
         options,
-        answer
+        answer,
+        explanation: String(question.explanation || `The answer is ${answer} because it best matches the concept being tested.`)
       }
     })
     .filter(Boolean) as QuizQuestion[]
@@ -80,7 +82,8 @@ function makeQuestion(id: string, prompt: string, answer: string, distractors: s
     id,
     prompt,
     options: shuffle([answer, ...shuffle(distractors).slice(0, 3)]),
-    answer
+    answer,
+    explanation: `The correct answer is "${answer}" because it directly addresses the key idea in the question.`
   }
 }
 
@@ -265,7 +268,8 @@ The JSON must use this exact shape:
       "id": "q1",
       "prompt": "Question text",
       "options": ["Option A", "Option B", "Option C", "Option D"],
-      "answer": "Option A"
+      "answer": "Option A",
+      "explanation": "One sentence explaining why the answer is correct."
     }
   ]
 }

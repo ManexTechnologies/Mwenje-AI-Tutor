@@ -10,8 +10,18 @@ const curricula = ['ZIMSEC', 'Cambridge']
 
 export default function ProfilePage() {
   const { user: currentUser, profile, loadingProfile, profileError, refreshProfile } = useProfile()
-  const [form, setForm] = useState({ name: '', email: '', school: '', grade: '', curriculum: 'ZIMSEC' })
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(['Maths', 'English'])
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    school: '',
+    grade: '',
+    curriculum: 'ZIMSEC',
+    learningGoals: 'Improve exam performance',
+    preferredLearningStyle: 'step-by-step examples',
+    weakAreas: '',
+    examinationYear: ''
+  })
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(['Mathematics', 'English Language'])
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
@@ -22,7 +32,7 @@ export default function ProfilePage() {
     setForm({ ...form, grade })
     setSelectedSubjects((current) => {
       const selectedForGrade = current.filter((subject) => nextSubjects.includes(subject))
-      return selectedForGrade.length ? selectedForGrade : ['Maths', 'English'].filter((subject) => nextSubjects.includes(subject))
+      return selectedForGrade.length ? selectedForGrade : ['Mathematics', 'English Language'].filter((subject) => nextSubjects.includes(subject))
     })
   }
 
@@ -31,8 +41,8 @@ export default function ProfilePage() {
     setError(profileError || '')
 
     if (!currentUser) {
-      setForm({ name: '', email: '', school: '', grade: '', curriculum: 'ZIMSEC' })
-      setSelectedSubjects(['Maths', 'English'])
+      setForm({ name: '', email: '', school: '', grade: '', curriculum: 'ZIMSEC', learningGoals: '', preferredLearningStyle: '', weakAreas: '', examinationYear: '' })
+      setSelectedSubjects(['Mathematics', 'English Language'])
       return
     }
 
@@ -43,9 +53,13 @@ export default function ProfilePage() {
       email: profile.email,
       school: profile.school,
       grade: profile.grade,
-      curriculum: profile.curriculum
+      curriculum: profile.curriculum,
+      learningGoals: profile.learningGoals.join(', '),
+      preferredLearningStyle: profile.preferredLearningStyle,
+      weakAreas: profile.weakAreas.join(', '),
+      examinationYear: profile.examinationYear ? String(profile.examinationYear) : ''
     })
-    setSelectedSubjects(profile.subjects.length ? profile.subjects : ['Maths', 'English'])
+    setSelectedSubjects(profile.subjects.length ? profile.subjects : ['Mathematics', 'English Language'])
   }, [currentUser, profile, profileError])
 
   function toggleSubject(subject: string) {
@@ -82,7 +96,11 @@ export default function ProfilePage() {
       email: form.email || currentUser.email || '',
       grade: form.grade,
       curriculum: form.curriculum,
-      subjects: selectedSubjects
+      subjects: selectedSubjects,
+      learningGoals: form.learningGoals.split(',').map((item) => item.trim()).filter(Boolean),
+      preferredLearningStyle: form.preferredLearningStyle,
+      weakAreas: form.weakAreas.split(',').map((item) => item.trim()).filter(Boolean),
+      examinationYear: form.examinationYear ? Number(form.examinationYear) : null
     }
     setSaving(true)
 
@@ -173,6 +191,55 @@ export default function ProfilePage() {
                     <option key={curriculum} value={curriculum}>{curriculum}</option>
                   ))}
                 </select>
+              </label>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2 lg:gap-6">
+              <label className="block">
+                <span className="text-sm font-medium text-text-secondary">Learning goals</span>
+                <input
+                  disabled={loadingProfile || saving}
+                  value={form.learningGoals}
+                  onChange={(e) => setForm({ ...form, learningGoals: e.target.value })}
+                  className="mt-2 w-full rounded-3xl border border-[rgba(28,25,23,0.1)] bg-bg-secondary px-4 py-3 text-text-primary outline-none transition focus:border-accent-secondary disabled:opacity-60"
+                  placeholder="Pass Maths, improve problem solving"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-text-secondary">Preferred learning style</span>
+                <select
+                  disabled={loadingProfile || saving}
+                  value={form.preferredLearningStyle}
+                  onChange={(e) => setForm({ ...form, preferredLearningStyle: e.target.value })}
+                  className="mt-2 w-full rounded-3xl border border-[rgba(28,25,23,0.1)] bg-bg-secondary px-4 py-3 text-text-primary outline-none focus:border-accent-secondary disabled:opacity-60"
+                >
+                  {['step-by-step examples', 'visual explanations', 'exam practice', 'short summaries'].map((style) => (
+                    <option key={style} value={style}>{style}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-text-secondary">Weak areas</span>
+                <input
+                  disabled={loadingProfile || saving}
+                  value={form.weakAreas}
+                  onChange={(e) => setForm({ ...form, weakAreas: e.target.value })}
+                  className="mt-2 w-full rounded-3xl border border-[rgba(28,25,23,0.1)] bg-bg-secondary px-4 py-3 text-text-primary outline-none transition focus:border-accent-secondary disabled:opacity-60"
+                  placeholder="Simultaneous equations, graphs"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-text-secondary">Examination year</span>
+                <input
+                  type="number"
+                  min={2026}
+                  max={2035}
+                  disabled={loadingProfile || saving}
+                  value={form.examinationYear}
+                  onChange={(e) => setForm({ ...form, examinationYear: e.target.value })}
+                  className="mt-2 w-full rounded-3xl border border-[rgba(28,25,23,0.1)] bg-bg-secondary px-4 py-3 text-text-primary outline-none transition focus:border-accent-secondary disabled:opacity-60"
+                  placeholder="2026"
+                />
               </label>
             </div>
 

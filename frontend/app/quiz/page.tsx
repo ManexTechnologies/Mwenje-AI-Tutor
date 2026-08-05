@@ -12,6 +12,7 @@ type QuizQuestion = {
   prompt: string
   options: string[]
   answer: string
+  explanation?: string
 }
 
 type GeneratedQuiz = {
@@ -37,6 +38,23 @@ export default function QuizPage() {
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const topics = useMemo(() => subjectTopics[subject] || [], [subject])
+
+  useEffect(() => {
+    const savedTutorQuiz = window.localStorage.getItem('mwenjeTutorQuiz')
+    if (savedTutorQuiz) {
+      try {
+        const parsed = JSON.parse(savedTutorQuiz) as GeneratedQuiz
+        window.localStorage.removeItem('mwenjeTutorQuiz')
+        setQuiz(parsed)
+        setSubject(parsed.subject)
+        setTopic(parsed.topic)
+        setDifficulty(parsed.difficulty)
+        setPhase('question')
+      } catch {
+        window.localStorage.removeItem('mwenjeTutorQuiz')
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -88,20 +106,22 @@ export default function QuizPage() {
     }
   }
 
-  async function saveQuizScore(nextScore: number, nextQuiz: GeneratedQuiz) {
+  async function markAndSaveQuiz(nextQuiz: GeneratedQuiz, nextAnswers: Record<string, string>) {
     if (!user) {
       setStatus('Score calculated. Log in to save your progress.')
       return
     }
 
     try {
-      const res = await fetchWithAuth(`${apiBase}/progress/quiz-result`, {
+      const res = await fetchWithAuth(`${apiBase}/ai/quiz/mark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: nextQuiz.subject, score: nextScore, totalQuestions: nextQuiz.questions.length })
+        body: JSON.stringify({ quiz: nextQuiz, answers: nextAnswers })
       })
 
       if (!res.ok) throw new Error('Score calculated, but progress was not saved')
+      const data = await res.json() as { result?: { score: number } }
+      if (typeof data.result?.score === 'number') setScore(data.result.score)
       setStatus('Progress saved')
     } catch (e) {
       setStatus(e instanceof Error ? e.message : 'Progress was not saved')
@@ -128,7 +148,7 @@ export default function QuizPage() {
     setScore(nextScore)
     setPhase('result')
     setStatus(null)
-    await saveQuizScore(nextScore, quiz)
+    await markAndSaveQuiz(quiz, nextAnswers)
   }
 
   function chooseSubject(nextSubject: string) {
@@ -335,6 +355,7 @@ export default function QuizPage() {
                         {wasCorrect ? 'Correct' : `You chose: ${answers[question.id] || 'No answer'}`}
                       </p>
                       {!wasCorrect ? <p className="mt-1 text-sm text-text-secondary">Correct answer: {question.answer}</p> : null}
+                      {question.explanation ? <p className="mt-2 text-sm text-text-secondary">{question.explanation}</p> : null}
                     </div>
                   )
                 })}

@@ -2,20 +2,55 @@ import { Router, Request, Response } from 'express'
 import { Pool } from 'mysql2/promise'
 import { TutorSessionRepository } from '../lib/tutorSessionRepository'
 import { askClaude, normalizeAiResponse, type QueryMode, type TutorRequest } from '../lib/claude'
+import { buildPersonalizedTutorPrompt } from '../lib/tutorPrompt'
+import { buildProfileFallback, getProfile } from '../services/profileStore'
 import { z } from 'zod'
 
 /**
  * Request validation schema for /api/tutor/ask
  */
+const supportedSubjects = [
+  'Mathematics',
+  'Maths',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Geography',
+  'History',
+  'Accounts',
+  'Principles of Accounting',
+  'Accounting',
+  'Computer Science',
+  'English Language',
+  'English'
+]
+
 const TutorAskSchema = z.object({
   prompt: z.string().min(1, 'Prompt cannot be empty').max(2000, 'Prompt too long'),
-  subject: z.string().min(1, 'Subject required'),
-  grade: z.enum(['O Level', 'A Level', 'Form 3', 'Form 4']).optional().default('O Level'),
+  subject: z.string().min(1, 'Subject required').refine((subject) => supportedSubjects.includes(subject), 'Unsupported subject'),
+  grade: z.enum(['Form 1', 'Form 2', 'Form 3', 'Form 4', 'O Level', 'A Level']).optional().default('O Level'),
   mode: z.enum(['explain', 'exam_practice', 'essay_feedback', 'quiz', 'general']).optional().default('explain'),
   session_id: z.number().optional()
 })
 
 type TutorAskRequest = z.infer<typeof TutorAskSchema>
+
+const rateLimitWindowMs = 60_000
+const maxRequestsPerWindow = 12
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>()
+
+function isRateLimited(userId: string) {
+  const now = Date.now()
+  const bucket = rateLimitBuckets.get(userId)
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(userId, { count: 1, resetAt: now + rateLimitWindowMs })
+    return false
+  }
+
+  bucket.count += 1
+  return bucket.count > maxRequestsPerWindow
+}
 
 /**
  * Create the tutor router with database injection.
@@ -67,8 +102,13 @@ export function createTutorRouter(db: Pool) {
 
       // Get user ID from auth middleware (assumes req.user is set by authMiddleware)
       const userId = (req as any).user?.id
+      const user = (req as any).user
       if (!userId) {
         return res.status(401).json({ success: false, error: 'Unauthorized' })
+      }
+
+      if (isRateLimited(String(userId))) {
+        return res.status(429).json({ success: false, error: 'Too many tutor requests. Please wait a minute and try again.' })
       }
 
       let sessionId = session_id
@@ -91,11 +131,31 @@ export function createTutorRouter(db: Pool) {
         content: msg.content
       }))
 
+      const fallback = buildProfileFallback({ name: user?.name, email: user?.email })
+      const profile = await getProfile(String(user?.uid || userId), fallback)
+      const personalizedPrompt = buildPersonalizedTutorPrompt(
+        {
+          grade: profile.grade || grade,
+          curriculum: profile.curriculum,
+          subjects: profile.subjects,
+          learningGoals: profile.learningGoals,
+          preferredLearningStyle: profile.preferredLearningStyle,
+          weakAreas: profile.weakAreas,
+          examinationYear: profile.examinationYear
+        },
+        {
+          prompt,
+          subject,
+          grade,
+          mode: mode as QueryMode
+        }
+      )
+
       // Call Claude with the tutor request
       const claudeRequest: TutorRequest = {
-        prompt,
+        prompt: personalizedPrompt,
         subject,
-        grade: grade as 'O Level' | 'A Level',
+        grade,
         mode: mode as QueryMode,
         conversationHistory
       }

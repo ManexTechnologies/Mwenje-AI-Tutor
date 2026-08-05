@@ -13,6 +13,10 @@ export type QuizResultInput = {
   subject: string
   score: number
   totalQuestions?: number
+  topic?: string
+  difficulty?: string
+  correctAnswers?: number
+  durationSeconds?: number
 }
 
 export type LeaderboardEntry = {
@@ -40,7 +44,30 @@ type ProgressRow = RowDataPacket & {
   subjects: string | Record<string, SubjectProgress>
 }
 
+type QuizHistoryEntry = {
+  id: string
+  subject: string
+  topic: string
+  difficulty: string
+  score: number
+  totalQuestions: number
+  correctAnswers: number
+  createdAt: string
+}
+
+type QuizRow = RowDataPacket & {
+  id: number
+  subject: string
+  topic: string
+  difficulty: string
+  score: number
+  total_questions: number
+  correct_answers: number
+  created_at: Date | string
+}
+
 const memoryStore = new Map<string, UserProgressRecord>()
+const memoryQuizResults = new Map<string, QuizHistoryEntry[]>()
 
 function useMemoryStore() {
   return process.env.NODE_ENV === 'test' || process.env.PROGRESS_STORE === 'memory'
@@ -176,12 +203,92 @@ function toProgressResponse(record: UserProgressRecord) {
     mastery,
     masteryAverage,
     streakDays: record.streakDays,
-    xpPoints: record.xpPoints
+    xpPoints: record.xpPoints,
+    weeklyActivity: buildWeeklyActivity(record),
+    recentQuizzes: getMemoryQuizHistory(record.uid)
   }
 }
 
+function buildWeeklyActivity(record: UserProgressRecord) {
+  const today = new Date()
+  return Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() - (6 - offset))
+    const key = date.toISOString().slice(0, 10)
+    const attempts = Object.values(record.subjects).filter((entry) => entry.lastUpdated.slice(0, 10) === key).length
+    return { date: key, attempts }
+  })
+}
+
+function getMemoryQuizHistory(uid: string) {
+  return (memoryQuizResults.get(uid) || []).slice(0, 8)
+}
+
+async function getMysqlQuizHistory(uid: string): Promise<QuizHistoryEntry[]> {
+  const [rows] = await getPool().execute<QuizRow[]>(
+    `SELECT id, subject, topic, difficulty, score, total_questions, correct_answers, created_at
+     FROM quiz_results
+     WHERE user_id = ?
+     ORDER BY created_at DESC
+     LIMIT 8`,
+    [Number(uid)]
+  )
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    subject: row.subject,
+    topic: row.topic,
+    difficulty: row.difficulty,
+    score: row.score,
+    totalQuestions: row.total_questions,
+    correctAnswers: row.correct_answers,
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)
+  }))
+}
+
+async function addQuizHistory(uid: string, input: Required<Pick<QuizResultInput, 'subject' | 'score'>> & QuizResultInput) {
+  const totalQuestions = Math.max(1, input.totalQuestions || 1)
+  const correctAnswers = Math.max(0, Math.min(totalQuestions, input.correctAnswers ?? Math.round((input.score / 100) * totalQuestions)))
+
+  if (useMemoryStore()) {
+    const current = memoryQuizResults.get(uid) || []
+    current.unshift({
+      id: `${Date.now()}-${current.length + 1}`,
+      subject: input.subject,
+      topic: input.topic || '',
+      difficulty: input.difficulty || '',
+      score: input.score,
+      totalQuestions,
+      correctAnswers,
+      createdAt: new Date().toISOString()
+    })
+    memoryQuizResults.set(uid, current.slice(0, 20))
+    return
+  }
+
+  await getPool().execute(
+    `INSERT INTO quiz_results (user_id, subject, topic, difficulty, score, total_questions, correct_answers, duration_seconds)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      Number(uid),
+      input.subject,
+      input.topic || '',
+      input.difficulty || '',
+      input.score,
+      totalQuestions,
+      correctAnswers,
+      input.durationSeconds ?? null
+    ]
+  )
+}
+
 export async function getUserProgress(uid: string) {
-  return toProgressResponse(await readRecord(uid))
+  const record = await readRecord(uid)
+  const response = toProgressResponse(record)
+  return {
+    ...response,
+    recentQuizzes: useMemoryStore() ? response.recentQuizzes : await getMysqlQuizHistory(uid)
+  }
 }
 
 export async function recordQuizResult(uid: string, name: string | undefined, input: QuizResultInput) {
@@ -191,13 +298,14 @@ export async function recordQuizResult(uid: string, name: string | undefined, in
   }
 
   const score = normalizeScore(input.score)
+  const totalQuestions = Math.max(1, input.totalQuestions || 1)
   const record = await readRecord(uid)
   const previous = record.subjects[subject]
   const attempts = (previous?.attempts || 0) + 1
   const masteryScore = previous ? Math.round(previous.score * 0.7 + score * 0.3) : score
 
   record.name = name || record.name || 'Learner'
-  record.xpPoints += scoreToXp(score, input.totalQuestions)
+  record.xpPoints += scoreToXp(score, totalQuestions)
   record.streakDays = calculateStreak(record.lastActivityDate, record.streakDays)
   record.lastActivityDate = todayKey()
   record.subjects[subject] = {
@@ -209,7 +317,8 @@ export async function recordQuizResult(uid: string, name: string | undefined, in
   }
 
   await writeRecord(record)
-  return toProgressResponse(record)
+  await addQuizHistory(uid, { ...input, subject, score, totalQuestions })
+  return getUserProgress(uid)
 }
 
 export async function getLeaderboard(limit = 10) {
@@ -246,4 +355,5 @@ export async function getLeaderboard(limit = 10) {
 
 export function resetProgressStoreForTests() {
   memoryStore.clear()
+  memoryQuizResults.clear()
 }

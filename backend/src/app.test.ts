@@ -4,6 +4,7 @@ import { AddressInfo } from 'node:net'
 import { Server } from 'node:http'
 import { createApp } from './app'
 import { resetProgressStoreForTests } from './services/progressStore'
+import { resetStudyPlansForTests } from './services/studyPlanner'
 
 let baseUrl = ''
 let server: Server
@@ -20,6 +21,7 @@ before(async () => {
 
 afterEach(() => {
   resetProgressStoreForTests()
+  resetStudyPlansForTests()
 })
 
 after(async () => {
@@ -43,6 +45,45 @@ function wordCount(text: string) {
 }
 
 describe('protected backend routes', () => {
+  it('returns an auth error instead of a database error for /auth/me when the database is unavailable', async () => {
+    const previousNodeEnv = process.env.NODE_ENV
+    const previousDbHost = process.env.DB_HOST
+    const previousDbPort = process.env.DB_PORT
+
+    process.env.NODE_ENV = 'development'
+    process.env.DB_HOST = '127.0.0.1'
+    process.env.DB_PORT = '1'
+
+    const authOnlyServer = createApp().listen(0)
+    await new Promise<void>((resolve) => authOnlyServer.once('listening', resolve))
+    const address = authOnlyServer.address() as AddressInfo
+    const authOnlyBaseUrl = `http://127.0.0.1:${address.port}`
+
+    try {
+      const res = await fetch(`${authOnlyBaseUrl}/auth/me`)
+      const body = await res.json()
+
+      assert.equal(res.status, 401)
+      assert.equal(body.error, 'Missing session')
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV
+      else process.env.NODE_ENV = previousNodeEnv
+
+      if (previousDbHost === undefined) delete process.env.DB_HOST
+      else process.env.DB_HOST = previousDbHost
+
+      if (previousDbPort === undefined) delete process.env.DB_PORT
+      else process.env.DB_PORT = previousDbPort
+
+      await new Promise<void>((resolve, reject) => {
+        authOnlyServer.close((error) => {
+          if (error) reject(error)
+          else resolve()
+        })
+      })
+    }
+  })
+
   it('rejects requests without an Authorization header', async () => {
     const res = await fetch(`${baseUrl}/progress`)
     const body = await res.json()
@@ -357,6 +398,28 @@ describe('essay generation', () => {
 })
 
 describe('progress and leaderboard scoring', () => {
+  it('marks a generated quiz server-side and updates progress', async () => {
+    const quizRes = await fetch(`${baseUrl}/ai/quiz`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: 'Mathematics', topic: 'Simultaneous equations', difficulty: 'Core' })
+    })
+    const { quiz } = await quizRes.json()
+    const answers = Object.fromEntries(quiz.questions.map((question: any) => [question.id, question.answer]))
+
+    const markRes = await fetch(`${baseUrl}/ai/quiz/mark`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ quiz, answers })
+    })
+    const body = await markRes.json()
+
+    assert.equal(markRes.status, 201)
+    assert.equal(body.result.score, 100)
+    assert.equal(body.progress.mastery[0].subject, 'Mathematics')
+    assert.equal(body.progress.recentQuizzes[0].topic, 'Simultaneous equations')
+  })
+
   it('persists quiz results and rolls them into mastery and XP', async () => {
     const first = await fetch(`${baseUrl}/progress/quiz-result`, {
       method: 'POST',
@@ -405,5 +468,30 @@ describe('progress and leaderboard scoring', () => {
     assert.equal(body.top[1].uid, 'learner-1')
 
     process.env.TEST_AUTH_UID = 'learner-1'
+  })
+})
+
+describe('study planner', () => {
+  it('generates and persists a profile-aware study plan', async () => {
+    const res = await fetch(`${baseUrl}/ai/planner`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        subjects: ['Mathematics', 'Physics'],
+        weakSubjects: ['Mathematics'],
+        examDate: '2026-11-10',
+        hoursPerDay: 2
+      })
+    })
+    const body = await res.json()
+
+    assert.equal(res.status, 200)
+    assert.equal(body.plan.weeklyPlan.length, 7)
+    assert.ok(body.plan.priorityTopics.includes('simultaneous equations'))
+
+    const latestRes = await fetch(`${baseUrl}/ai/planner/latest`, { headers: authHeaders() })
+    const latest = await latestRes.json()
+    assert.equal(latestRes.status, 200)
+    assert.equal(latest.plan.weeklyPlan.length, 7)
   })
 })
