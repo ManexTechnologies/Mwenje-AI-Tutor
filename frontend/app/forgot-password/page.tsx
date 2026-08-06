@@ -9,12 +9,12 @@ export default function ForgotPasswordPage() {
     <main className="min-h-screen bg-bg-primary text-text-primary">
       <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
         <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-soft sm:rounded-[32px] sm:p-10">
-          <div className="flex items-center gap-3">
+<div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Mwenje logo" className="h-12 w-12 rounded-full object-cover shadow-sm" />
+            <img src="/logo.png" alt="Mwenje logo" className="h-14 w-14 rounded-full object-cover shadow-sm" />
             <div className="flex flex-col">
-              <span className="text-lg font-semibold tracking-tight text-text-primary">MWENJE</span>
-              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-primary">Learn Smart Shine Bright</span>
+              <span className="text-2xl font-bold tracking-tight text-text-primary">MWENJE</span>
+              <span className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-accent-primary">Learn Smart Shine Bright</span>
             </div>
           </div>
           <p className="mt-8 text-sm uppercase tracking-[0.28em] text-accent-secondary">Forgot password</p>

@@ -36,12 +36,12 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-center">
 <div className="space-y-8">
-            <div className="flex items-center gap-4">
+<div className="flex items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Mwenje logo" className="h-16 w-16 rounded-full object-cover shadow-soft sm:h-20 sm:w-20" />
+              <img src="/logo.png" alt="Mwenje logo" className="h-20 w-20 rounded-full object-cover shadow-soft sm:h-24 sm:w-24" />
               <div className="flex flex-col">
-                <span className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl">MWENJE</span>
-                <span className="mt-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-accent-primary">Learn Smart Shine Bright</span>
+                <span className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">MWENJE</span>
+                <span className="mt-1 text-sm font-semibold uppercase tracking-[0.18em] text-accent-primary">Learn Smart Shine Bright</span>
               </div>
             </div>
 <div className="space-y-6">
