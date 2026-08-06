@@ -21,8 +21,17 @@ const dmSans = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Mwenje — Your guiding light to academic excellence',
-  description: 'AI-powered learning for Zimbabwean high school students',
+  title: {
+    default: 'Mwenje — Learn Smart Shine Bright',
+    template: '%s · Mwenje'
+  },
+  description: 'Learn Smart Shine Bright — AI-powered learning for Zimbabwean high school students.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+    shortcut: '/logo.png'
+  },
+  manifest: '/site.webmanifest'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

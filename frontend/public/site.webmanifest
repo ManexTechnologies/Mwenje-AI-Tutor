@@ -1,0 +1,23 @@
+{
+  "name": "Mwenje — Learn Smart Shine Bright",
+  "short_name": "Mwenje",
+  "description": "AI-powered learning for Zimbabwean high school students. Learn Smart Shine Bright.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFAF6",
+  "theme_color": "#C9682A",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

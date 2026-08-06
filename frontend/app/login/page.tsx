@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-try {
+    try {
       await loginUser(email, password)
       await refreshAuth()
       router.push('/dashboard')
@@ -35,7 +35,15 @@ try {
     <main className="min-h-screen bg-bg-primary text-text-primary">
       <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
         <div className="rounded-[24px] border border-[rgba(28,25,23,0.08)] bg-white p-5 shadow-soft sm:rounded-[32px] sm:p-10">
-          <p className="text-sm uppercase tracking-[0.28em] text-accent-secondary">Welcome back</p>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Mwenje logo" className="h-12 w-12 rounded-full object-cover shadow-sm" />
+            <div className="flex flex-col">
+              <span className="text-lg font-semibold tracking-tight text-text-primary">MWENJE</span>
+              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-primary">Learn Smart Shine Bright</span>
+            </div>
+          </div>
+          <p className="mt-8 text-sm uppercase tracking-[0.28em] text-accent-secondary">Welcome back</p>
           <h1 className="mt-4 text-3xl font-display font-semibold sm:text-4xl">Log in to your learning hub.</h1>
           {error && (
             <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>

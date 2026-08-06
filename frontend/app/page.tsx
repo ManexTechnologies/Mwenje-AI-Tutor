@@ -35,11 +35,16 @@ export default function Home() {
     <main className="min-h-screen bg-bg-primary text-text-primary">
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-center">
-          <div className="space-y-8">
-            <span className="inline-flex rounded-full border border-[rgba(201,104,42,0.22)] bg-[#FFF2E8] px-4 py-1 text-sm text-accent-primary">
-              Warm and focused learning for Zimbabwean students
-            </span>
-            <div className="space-y-6">
+<div className="space-y-8">
+            <div className="flex items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Mwenje logo" className="h-16 w-16 rounded-full object-cover shadow-soft sm:h-20 sm:w-20" />
+              <div className="flex flex-col">
+                <span className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl">MWENJE</span>
+                <span className="mt-0.5 text-xs font-semibold uppercase tracking-[0.18em] text-accent-primary">Learn Smart Shine Bright</span>
+              </div>
+            </div>
+<div className="space-y-6">
               <h1 className="text-4xl font-display font-semibold leading-tight tracking-tight text-text-primary sm:text-5xl md:text-6xl">
                 Your guiding light to academic excellence
               </h1>

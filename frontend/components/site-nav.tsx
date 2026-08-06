@@ -67,8 +67,13 @@ async function handleSignOut() {
 
   return (
     <nav className="sticky top-0 z-40 mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 bg-bg-primary/90 px-3 py-3 backdrop-blur sm:gap-4 sm:px-6 md:px-10">
-      <Link href="/" className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
-        MWENJE 🔥
+<Link href="/" className="flex items-center gap-2.5 sm:gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Mwenje logo" className="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10" />
+        <span className="flex flex-col leading-none">
+          <span className="text-lg font-semibold tracking-tight text-text-primary sm:text-xl">MWENJE</span>
+          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-primary">Learn Smart Shine Bright</span>
+        </span>
       </Link>
       <div className="hidden items-center gap-1 rounded-full border border-[rgba(28,25,23,0.08)] bg-white/85 p-1 shadow-sm backdrop-blur md:flex">
         {primaryNavItems.map((item) => (
